@@ -86,7 +86,7 @@ export class Visual implements IVisual {
 
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
-        console.info("Json Network #",this.id," Constructed")
+        console.info("Constellation #",this.id," Constructed")
 
         this.formattingSettingsService = new FormattingSettingsService();
         this.target = options.element;
@@ -117,6 +117,9 @@ export class Visual implements IVisual {
         try{
             var nodes : Array<CustomNode> = []
             var links : Array<CustomLink> = []
+
+            console.info("Constellation #",this.id," - Nodes: ", nodes)
+            console.info("Constellation #",this.id," - Links: ", links)
 
             var source_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_node)
             var source_fill_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_fill)
@@ -154,6 +157,8 @@ export class Visual implements IVisual {
             
                 // Check if target column exists
                 var target: CustomNode = undefined
+                
+                
                 if (row[target_column_index] && row[target_column_index] !== null){
                     target = {
                         label: row[target_column_index].toString()
@@ -163,12 +168,12 @@ export class Visual implements IVisual {
                     var target_exists = false
                     nodes.forEach((node) => {
                         if (node.label === target.label){
-                            source_exists = true
+                            target_exists = true
                         }
                     })
-                if (!target_exists && target && target !== undefined){
-                    nodes.push(target)
-                }
+                    if (target_exists === false && target && target !== undefined){
+                        nodes.push(target)
+                    }
                 }    
 
                 var link_exists = false
