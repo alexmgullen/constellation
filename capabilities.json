@@ -1,0 +1,119 @@
+{
+    "dataRoles": [
+        {
+            "displayName": "Sources",
+            "name": "source_node",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Source Fill",
+            "name": "source_fill",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Targets",
+            "name": "target_node",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Link Distance",
+            "name": "distance",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Link color",
+            "name": "link_color",
+            "kind": "Grouping"
+        }
+    ],
+    "objects": {
+        "source" : {
+            "properties": {
+                "color" : {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color" : true
+                            }
+                        }
+                    }
+                },
+                "radius" : {
+                    "type": {
+                        "numeric": true
+                    }
+                }
+            }
+        },
+        "link" : {
+            "properties": {
+                "link_distance" : {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "link_gravity" : {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "link_width" : {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "link_color" : {
+                    "type": {
+                        "fill" : {
+                            "solid": {
+                                "color" : true
+                            }
+                        } 
+                    }
+                },
+                "link_opacity" : {
+                    "type" : {
+                        "numeric": true
+                    }
+                }
+            }
+        }
+    },
+    "dataViewMappings": [
+        {
+            "table": {
+                "rows": {
+                    "select": [
+                        {
+                            "for": {
+                                "in": "source_node"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "source_fill"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "target_node"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "distance"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "link_color"
+                            }
+
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "privileges": []
+}
