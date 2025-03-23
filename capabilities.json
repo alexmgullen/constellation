@@ -6,13 +6,13 @@
             "kind": "Grouping"
         },
         {
-            "displayName": "Source Fill",
-            "name": "source_fill",
+            "displayName": "Targets",
+            "name": "target_node",
             "kind": "Grouping"
         },
         {
-            "displayName": "Targets",
-            "name": "target_node",
+            "displayName": "Source Fill",
+            "name": "source_fill",
             "kind": "Grouping"
         },
         {

@@ -5,9 +5,9 @@
         "guid":"constellationC3682F5F8D8B4E64AECF6369114FB8DD",
         "visualClassName":"Visual",
         "version":"0.0.0.1",
-        "description":"",
+        "description":"Visualize Graphs or networks of interconnected nodes",
         "supportUrl":"alexmgullen.ca",
-        "gitHubUrl":""
+        "gitHubUrl":"https://github.com/alexmgullen/constellation"
     },
     "apiVersion":"5.3.0",
     "author":{
