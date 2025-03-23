@@ -1,0 +1,37 @@
+<svg id="network04d32d4a-2562-461b-a900-9f8f6dedc2d3" width="688" height="330" viewBox="-344,-165,688,330" style="width: 100%; height: 100%;">
+    <g id="link_group_04d32d4a-2562-461b-a900-9f8f6dedc2d3">
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="152.79322201809663" y1="27.7009736606351" x2="49.99931315810985" y2="14.015731773852675"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="-240.9125899194601" y1="4.508736463001937" x2="-143.00690144703717" y2="30.402299625830516"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="132.13380398811728" y1="-48.59004328590503" x2="233.56337977982636" y2="-36.09081961695254"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="-43.581703058167875" y1="60.316734364285686" x2="-143.00690144703717" y2="30.402299625830516"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="233.56337977982636" y1="-36.09081961695254" x2="152.79322201809663" y2="27.7009736606351"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="233.56337977982636" y1="-36.09081961695254" x2="233.56337977982636" y2="-36.09081961695254"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="-112.83403872502137" y1="-67.66434776062724" x2="-9.97958893915168" y2="-70.22176751633054"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="-143.00690144703717" y1="30.402299625830516" x2="-112.83403872502137" y2="-67.66434776062724"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="-9.97958893915168" y1="-70.22176751633054" x2="49.99931315810985" y2="14.015731773852675"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="49.99931315810985" y1="14.015731773852675" x2="132.13380398811728" y2="-48.59004328590503"></line>
+        <line stroke="#999999" stroke-opacity="0.6" stroke-width="15" x1="49.99931315810985" y1="14.015731773852675" x2="-43.581703058167875" y2="60.316734364285686"></line>
+    </g>
+    <g id="node_group_04d32d4a-2562-461b-a900-9f8f6dedc2d3">
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#0389cd" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="152.79322201809663" cy="27.7009736606351"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#056ab9" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="49.99931315810985" cy="14.015731773852675"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#00d4ff" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="-240.9125899194601" cy="4.508736463001937"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#090979" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="-143.00690144703717" cy="30.402299625830516"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#01bbee" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="132.13380398811728" cy="-48.59004328590503"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#01a9e2" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="233.56337977982636" cy="-36.09081961695254"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#073e9c" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="-43.581703058167875" cy="60.316734364285686"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#060557" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="-112.83403872502137" cy="-67.66434776062724"></circle>
+        <circle r="15" stroke="#0A0A0A" stroke-width="2.5" fill="#01c4f4" style="touch-action: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);" cx="-9.97958893915168" cy="-70.22176751633054"></circle>
+    </g>
+    <g id="label_group_04d32d4a-2562-461b-a900-9f8f6dedc2d3" font-size="2.5em" font-family="Arial">
+        <text x="167.79322201809663" y="12.7009736606351">A</text>
+        <text x="64.99931315810986" y="-0.984268226147325">T</text>
+        <text x="-225.9125899194601" y="-10.491263536998062">C</text>
+        <text x="-128.00690144703717" y="15.402299625830516">O</text>
+        <text x="147.13380398811728" y="-63.59004328590503">E</text>
+        <text x="248.56337977982636" y="-51.09081961695254">L</text>
+        <text x="-28.581703058167875" y="45.316734364285686">I</text>
+        <text x="-97.83403872502137" y="-82.66434776062724">N</text>
+        <text x="5.0204110608483195" y="-85.22176751633054">S</text>
+    </g>
+</svg>
