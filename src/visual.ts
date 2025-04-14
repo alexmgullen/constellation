@@ -58,6 +58,7 @@ interface CustomNode extends d3.SimulationNodeDatum{
 
     label: string
     fill?: string
+    size?: number
 }
 
 interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
@@ -86,7 +87,8 @@ export class Visual implements IVisual {
 
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
-        console.info("Constellation #",this.id," Constructed")
+        console.debug("Constellation #",this.id," Constructed")
+        console.log(options)
 
         this.formattingSettingsService = new FormattingSettingsService();
         this.target = options.element;
@@ -106,23 +108,34 @@ export class Visual implements IVisual {
 
             this.svg.append("g").attr("id","label_group_" + this.id)
 
-            console.info("current svg:", this.svg)
+            console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
+
+        //this.update(new VisualUpdate)
+    }
+
+    public renderingStarted(){
+        console.log("rendering started")
+
     }
 
     public update(options: VisualUpdateOptions) {
         //TODO: figure out why a dataview is passed to options even when the field has been removed from the viusal
         this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
 
+        console.log("constellation - update called")
         try{
-            var nodes : Array<CustomNode> = []
-            var links : Array<CustomLink> = []
+            var nodes : Record<string,CustomNode> = {}
+            var links : Record<string,CustomLink> = {}
 
-            console.info("Constellation #",this.id," - Nodes: ", nodes)
-            console.info("Constellation #",this.id," - Links: ", links)
+            console.debug("constellation custom visual # ",this.id," - nodes: ", nodes)
+            console.debug("constellation custom visual # ",this.id," - links: ", links)
+            
 
             var source_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_node)
             var source_fill_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_fill)
+            const source_size_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_size)
+
         
             var target_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.target_node)
             var distance_column_index: number =  options.dataViews[0].table.columns.findIndex((element) => element.roles?.distance)
@@ -133,79 +146,73 @@ export class Visual implements IVisual {
                 throw new Error("Sources column is required")
             }
 
+            //foreach row in the input table
             options.dataViews[0].table.rows.forEach((row) => {
                 var source: CustomNode = {
                     label: row[source_column_index].toString(),
                     //TODO: can probably simplify this
-                    fill: source_fill_column_index > -1 && typeof row[source_fill_column_index] === "string" ? row[source_fill_column_index].toString()  : undefined
+                    fill: source_fill_column_index > -1 && typeof row[source_fill_column_index] === "string" ? row[source_fill_column_index].toString()  : undefined,
+                    size: source_size_column_index > -1 && typeof row[source_size_column_index] === "string" && !Number.isNaN(Number(row[source_size_column_index])) ? Number(row[source_size_column_index]) : undefined
                 }
 
-                //TODO: find a more efficient way to do this
-                var source_exists = false
-                nodes.forEach((node) => {
-                    if (node.label === source.label){
-                        source_exists = true
-
-                        if (!node.fill){
-                            node.fill = source.fill
-                        }
+                if (source.label in nodes){
+                    if (!nodes[source.label].fill){
+                        nodes[source.label].fill = source.fill
                     }
-                })
-                if (!source_exists && source && source !== undefined){
-                    nodes.push(source)
+                    if (!nodes[source.label].size){
+                        nodes[source.label].size = source.size
+                    }
+                }else{
+                    nodes[source.label] = source
                 }
-            
-                // Check if target column exists
+
                 var target: CustomNode = undefined
-                
                 
                 if (row[target_column_index] && row[target_column_index] !== null){
                     target = {
                         label: row[target_column_index].toString()
                     }
 
-                    // Check if target exists in nodes
-                    var target_exists = false
-                    nodes.forEach((node) => {
-                        if (node.label === target.label){
-                            target_exists = true
+                    if (target.label in nodes){
+                        if(!nodes[target.label].fill){
+                            nodes[target.label].fill = target.fill
                         }
-                    })
-                    if (target_exists === false && target && target !== undefined){
-                        nodes.push(target)
-                    }
-                }    
 
-                var link_exists = false
-                links.forEach((link) => {
-                    if (link.source === source.label && link.target == target.label){
-                        link_exists = true
-                    }
-                })
+                    }else{
+                        nodes[target.label] = target
 
-                if (!link_exists && target && target !== undefined){
-                    links.push(<CustomLink>{
-                        source: source.label,
-                        target: target.label,
-                        distance: row[distance_column_index] !== null ? row[distance_column_index] : undefined,
-                        color: row[link_color_column_index] !== null ? row[link_color_column_index] : undefined,
-                        x: 0,
-                        y: 0
-                    })
+                    }
                 }
+
+		//create a link if both source and target exist
+		if(source && target){
+
+            //TODO: abstract this to an "advanced parameter" of the visuals
+			const link_key = `${source.label}<SEPERATOR>${target.label}`
+			if(source && target && ! (link_key in links)){
+				links[link_key] = <CustomLink>{
+					source: source.label,
+					target: target.label,
+					distance: row[distance_column_index] !== null ? row[distance_column_index] : undefined,
+					color: row[link_color_column_index] !== null ? row[link_color_column_index] : undefined,
+					x: 0,
+					y: 0
+				}
+			}	
+		}
         })
 
         const radius = this.formattingSettings.SourceSettings.radius.value || 15
 
-        const simulation = d3.forceSimulation<CustomNode>(nodes)
-            .force("link", d3.forceLink<CustomNode, CustomLink>(links).id((d) => d.label).distance((d) => this.formattingSettings.LinkSettings.distance.value))
+        const simulation = d3.forceSimulation<CustomNode>(Object.keys(nodes).map((k) => nodes[k]))
+            .force("link", d3.forceLink<CustomNode, CustomLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => this.formattingSettings.LinkSettings.distance.value))
             .force("charge", d3.forceManyBody().strength(this.formattingSettings.LinkSettings.gravity.value || -30))
 
         const node_element = this.svg.select("#node_group_" + this.id)
             .selectAll("circle")
-            .data<CustomNode>(nodes)
+            .data<CustomNode>(Object.keys(nodes).map((k)=> nodes[k]))
             .join("circle")
-            .attr("r", radius)
+            .attr("r", (d) => d.size || radius)
             .attr("stroke",d => "#0A0A0A")
             .attr("stroke-width",d => 2.5)
             .attr("fill", d => d.fill || this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF")
@@ -217,13 +224,13 @@ export class Visual implements IVisual {
 
         const label_element = this.svg.select("#label_group_" + this.id)
             .selectAll("text")
-            .data<CustomNode>(nodes)
+            .data<CustomNode>(Object.keys(nodes).map((k) => nodes[k]))
             .join("text")
             .text((d) => d.label)
             
         const link_element = this.svg.select("#link_group_" + this.id)
             .selectAll('line')
-            .data(links)
+            .data(Object.keys(links).map((k) => links[k]))
             .join('line')
             .attr("stroke", d => d.color || this.formattingSettings.LinkSettings.color.value.value || "#999999")
             .attr("stroke-opacity", this.formattingSettings.LinkSettings.opacity.value * 0.01 || 0.6)
@@ -235,6 +242,7 @@ export class Visual implements IVisual {
             // [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight]
             node_element
                 .attr("cx", (d) => {
+                    //Bounds checking to ensure nodes don't leave the visual space
                     if (d.x - radius < (-this.target.clientWidth / 2)){
                         d.x = (-this.target.clientWidth / 2) + radius
                         d.vx = -d.vx
@@ -243,9 +251,12 @@ export class Visual implements IVisual {
                         d.x = (this.target.clientWidth / 2) - radius
                         d.vx = -d.vx
                     }
+
+                    //Regular behaviour if nodes are inside the bounds of our visual
                     return d.x
                 })
                 .attr("cy", (d) => {
+                    //Bounds checking to ensure nodes don't leave the visual space
                     if (d.y - radius < (-this.target.clientHeight / 2)){
                         d.y = (-this.target.clientHeight / 2) + radius
                         d.vy = -d.vy
@@ -255,6 +266,8 @@ export class Visual implements IVisual {
                         d.y = (this.target.clientHeight / 2) - radius
                         d.vy = -d.vy
                     }
+
+                    //Regular behaviour if nodes are inside the bounds of our visual
                     return d.y
                 })
 
@@ -269,6 +282,8 @@ export class Visual implements IVisual {
                 .attr("x2", d => typeof d.target !== "string" ? d.target.x : undefined)
                 .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
         });
+
+        
 
         
         function drag_start(event){
@@ -289,6 +304,7 @@ export class Visual implements IVisual {
             event.subject.fx = null
             event.subject.fy = null
         }
+
     }catch(update_exception){
         console.error("update error: ",update_exception)
     }

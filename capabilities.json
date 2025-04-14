@@ -11,7 +11,12 @@
             "kind": "Grouping"
         },
         {
-            "displayName": "Source Fill",
+            "displayName": "Souce - Size",
+            "name": "source_size",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Source - Color",
             "name": "source_fill",
             "kind": "Grouping"
         },
@@ -92,6 +97,11 @@
                         {
                             "for": {
                                 "in": "source_fill"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "source_size"
                             }
                         },
                         {
