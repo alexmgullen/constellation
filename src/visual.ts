@@ -85,12 +85,14 @@ export class Visual implements IVisual {
     private formattingSettingsService: FormattingSettingsService;
     private svg: d3.Selection<Element,Object,Element,Object>;
 
+    private renderingEvents: powerbi.extensibility.IVisualEventService;
+
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
         console.debug("Constellation #",this.id," Constructed")
         console.log(options)
-
         this.formattingSettingsService = new FormattingSettingsService();
+        this.renderingEvents = options.host.eventService;
         this.target = options.element;
         
         if (document) {
@@ -111,12 +113,6 @@ export class Visual implements IVisual {
             console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
 
-        //this.update(new VisualUpdate)
-    }
-
-    public renderingStarted(){
-        console.log("rendering started")
-
     }
 
     public update(options: VisualUpdateOptions) {
@@ -125,6 +121,7 @@ export class Visual implements IVisual {
 
         console.log("constellation - update called")
         try{
+            this.renderingEvents.renderingStarted(options);
             var nodes : Record<string,CustomNode> = {}
             var links : Record<string,CustomLink> = {}
 
@@ -305,7 +302,10 @@ export class Visual implements IVisual {
             event.subject.fy = null
         }
 
+        this.renderingEvents.renderingFinished(options);
+
     }catch(update_exception){
+        this.renderingEvents.renderingFailed(options, <string>update_exception);
         console.error("update error: ",update_exception)
     }
 
