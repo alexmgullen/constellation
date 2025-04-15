@@ -32,6 +32,8 @@ import "./../style/visual.less";
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
+import IVisualHost = powerbi.extensibility.visual.IVisualHost;
+
 import * as d3 from "d3";
 
 import { VisualFormattingSettingsModel } from "./settings";
@@ -59,6 +61,7 @@ interface CustomNode extends d3.SimulationNodeDatum{
     label: string
     fill?: string
     size?: number
+    selectionId?: powerbi.extensibility.ISelectionId
 }
 
 interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
@@ -78,6 +81,7 @@ interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
 }
 
 export class Visual implements IVisual {
+    private host: IVisualHost;
     private target: HTMLElement;
     private id: string; 
 
@@ -86,14 +90,18 @@ export class Visual implements IVisual {
     private svg: d3.Selection<Element,Object,Element,Object>;
 
     private renderingEvents: powerbi.extensibility.IVisualEventService;
+    private selectionManager: powerbi.extensibility.ISelectionManager;
 
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
         console.debug("Constellation #",this.id," Constructed")
         console.log(options)
+        
+        this.host = options.host
+        this.target = options.element;
         this.formattingSettingsService = new FormattingSettingsService();
         this.renderingEvents = options.host.eventService;
-        this.target = options.element;
+        this.selectionManager = options.host.createSelectionManager();
         
         if (document) {
             this.svg = d3.select(this.target).append("svg")
@@ -112,6 +120,8 @@ export class Visual implements IVisual {
 
             console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
+
+        console.log("selection manager:",this.selectionManager)
 
     }
 
@@ -143,13 +153,17 @@ export class Visual implements IVisual {
                 throw new Error("Sources column is required")
             }
 
-            //foreach row in the input table
-            options.dataViews[0].table.rows.forEach((row) => {
+            for (let rowIndex = 0; rowIndex < options.dataViews[0].table.rows.length; rowIndex += 1){
+                let row =  options.dataViews[0].table.rows[rowIndex]
+
+                
+                console.log(row)
                 var source: CustomNode = {
                     label: row[source_column_index].toString(),
                     //TODO: can probably simplify this
                     fill: source_fill_column_index > -1 && typeof row[source_fill_column_index] === "string" ? row[source_fill_column_index].toString()  : undefined,
-                    size: source_size_column_index > -1 && typeof row[source_size_column_index] === "string" && !Number.isNaN(Number(row[source_size_column_index])) ? Number(row[source_size_column_index]) : undefined
+                    size: source_size_column_index > -1 && typeof row[source_size_column_index] === "string" && !Number.isNaN(Number(row[source_size_column_index])) ? Number(row[source_size_column_index]) : undefined,
+                    selectionId: this.host.createSelectionIdBuilder().withTable(options.dataViews[0].table, rowIndex).createSelectionId()
                 }
 
                 if (source.label in nodes){
@@ -177,27 +191,26 @@ export class Visual implements IVisual {
 
                     }else{
                         nodes[target.label] = target
-
                     }
                 }
 
-		//create a link if both source and target exist
-		if(source && target){
+		        //create a link if both source and target exist
+		        if(source && target){
 
-            //TODO: abstract this to an "advanced parameter" of the visuals
-			const link_key = `${source.label}<SEPERATOR>${target.label}`
-			if(source && target && ! (link_key in links)){
-				links[link_key] = <CustomLink>{
-					source: source.label,
-					target: target.label,
-					distance: row[distance_column_index] !== null ? row[distance_column_index] : undefined,
-					color: row[link_color_column_index] !== null ? row[link_color_column_index] : undefined,
-					x: 0,
-					y: 0
-				}
-			}	
-		}
-        })
+                    //TODO: abstract this to an "advanced parameter" of the visuals
+			        const link_key = `${source.label}<SEPERATOR>${target.label}`
+			        if(source && target && ! (link_key in links)){
+				        links[link_key] = <CustomLink>{
+					        source: source.label,
+					        target: target.label,
+					        distance: row[distance_column_index] !== null ? row[distance_column_index] : undefined,
+					        color: row[link_color_column_index] !== null ? row[link_color_column_index] : undefined,
+					        x: 0,
+					        y: 0
+				        } 
+                    }
+                }
+            }
 
         const radius = this.formattingSettings.SourceSettings.radius.value || 15
 
@@ -218,6 +231,16 @@ export class Visual implements IVisual {
                     .on("drag", drag)
                     .on("end", drag_end)
             )
+            .on("click", (event, data) => {
+                if (event.defaultPrevented) return;
+
+                console.log(this.selectionManager)
+    
+                this.selectionManager.select(data.selectionId)
+    
+                console.log("Event: ", event)
+                console.log("Selection changed: ", data)
+            })
 
         const label_element = this.svg.select("#label_group_" + this.id)
             .selectAll("text")
