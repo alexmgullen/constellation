@@ -143,9 +143,11 @@ export class Visual implements IVisual {
         const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
         const formattingColor = this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF"
 
+        
         console.log("constellation - update called")
         try{
             this.renderingEvents.renderingStarted(options);
+
             var nodes : Record<string,CustomNode> = {}
             var links : Record<string,CustomLink> = {}
 
@@ -325,6 +327,8 @@ export class Visual implements IVisual {
                 .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
         });
 
+        
+
         //interactions
 
         let node_click = (event, data) => {
@@ -374,11 +378,12 @@ export class Visual implements IVisual {
         }
 
         this.renderingEvents.renderingFinished(options);
-
     }catch(update_exception){
+        this.host.displayWarningIcon("update error: ", update_exception.toString())
         this.renderingEvents.renderingFailed(options, <string>update_exception);
-        console.error("update error: ",update_exception)
     }
+
+    
 
     }
 
