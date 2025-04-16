@@ -4,15 +4,15 @@
         "displayName":"constellation",
         "guid":"constellationC3682F5F8D8B4E64AECF6369114FB8DD",
         "visualClassName":"Visual",
-        "version":"0.0.0.1",
+        "version":"1.0.0.0",
         "description":"Visualize Graphs or networks of interconnected nodes",
-        "supportUrl":"alexmgullen.ca",
-        "gitHubUrl":"https://github.com/alexmgullen/constellation"
+        "supportUrl":"grognard.ca",
+        "gitHubUrl":""
     },
     "apiVersion":"5.3.0",
     "author":{
-        "name":"Alexander Gullen",
-        "email":"developer@alexmgullen.ca"
+        "name":"Grognard Digital Solutions",
+        "email":"digital_solutions@grognard.ca"
     },
     "assets":{
         "icon":"assets/icon.png"
@@ -22,4 +22,5 @@
     "capabilities":"capabilities.json",
     "dependencies":null,
     "stringResources":[],
-    "version":"0.0.0.1"}
+    "version":"0.0.0.1"
+}
