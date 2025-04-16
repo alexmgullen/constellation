@@ -108,7 +108,6 @@ export class Visual implements IVisual {
                 .attr("id","network" + this.id)
                 .attr('width',options.element.clientWidth)
                 .attr('height',options.element.clientHeight)
-                .attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
                 .attr("style", "width: 100%; height: 100%;");
 
             //Create an invisible background for the canvas to allow background clicks to clear selection
@@ -127,19 +126,22 @@ export class Visual implements IVisual {
 
             console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
-
-        console.log("selection manager:",this.selectionManager)
         console.log("svg: ", this.svg)
+
 
     }
 
     public update(options: VisualUpdateOptions) {
+
+        //update the size of the svg to match the container
+        this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
+
         //TODO: figure out why a dataview is passed to options even when the field has been removed from the viusal
         this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
 
         //parse formatting settings
         const formattingRadius = this.formattingSettings.SourceSettings.radius.value || 15
-        const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 100
+        const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 75
         const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
         const formattingColor = this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF"
 
@@ -150,10 +152,6 @@ export class Visual implements IVisual {
 
             var nodes : Record<string,CustomNode> = {}
             var links : Record<string,CustomLink> = {}
-
-            console.debug("constellation custom visual # ",this.id," - nodes: ", nodes)
-            console.debug("constellation custom visual # ",this.id," - links: ", links)
-            
 
             var source_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_node)
             var source_fill_column_index: number = options.dataViews[0].table.columns.findIndex((element) => element.roles?.source_fill)
@@ -327,10 +325,7 @@ export class Visual implements IVisual {
                 .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
         });
 
-        
-
         //interactions
-
         let node_click = (event, data) => {
             if (event.defaultPrevented) return;
 
@@ -382,8 +377,6 @@ export class Visual implements IVisual {
         this.host.displayWarningIcon("update error: ", update_exception.toString())
         this.renderingEvents.renderingFailed(options, <string>update_exception);
     }
-
-    
 
     }
 

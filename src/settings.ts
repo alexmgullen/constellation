@@ -65,7 +65,7 @@ class LinkSettings extends FormattingSettingsCard {
     distance = new formattingSettings.NumUpDown({
         name: "link_distance",
         displayName: "Distance between nodes",
-        value: 20,
+        value: 75,
         visible: true
     })
 
