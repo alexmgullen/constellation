@@ -61,7 +61,7 @@ interface CustomNode extends d3.SimulationNodeDatum{
     label: string
     fill?: string
     size?: number
-    selectionId?: powerbi.extensibility.ISelectionId
+    selections: Record<string,powerbi.extensibility.ISelectionId>
 }
 
 interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
@@ -111,6 +111,13 @@ export class Visual implements IVisual {
                 .attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
                 .attr("style", "width: 100%; height: 100%;");
 
+            //Create an invisible background for the canvas to allow background clicks to clear selection
+            this.svg.append("g").attr("id","background_" + this.id).append("rect")
+            .attr("x",-this.target.clientWidth / 2)
+            .attr("y",-this.target.clientHeight / 2)
+            .attr("width",this.target.clientWidth)
+            .attr("height",this.target.clientHeight)
+            .attr("fill","rgb(0 0 0 / 0%)")
 
             this.svg.append("g").attr("id","link_group_" + this.id)
 
@@ -122,12 +129,19 @@ export class Visual implements IVisual {
         }
 
         console.log("selection manager:",this.selectionManager)
+        console.log("svg: ", this.svg)
 
     }
 
     public update(options: VisualUpdateOptions) {
         //TODO: figure out why a dataview is passed to options even when the field has been removed from the viusal
         this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
+
+        //parse formatting settings
+        const formattingRadius = this.formattingSettings.SourceSettings.radius.value || 15
+        const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 100
+        const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
+        const formattingColor = this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF"
 
         console.log("constellation - update called")
         try{
@@ -156,14 +170,19 @@ export class Visual implements IVisual {
             for (let rowIndex = 0; rowIndex < options.dataViews[0].table.rows.length; rowIndex += 1){
                 let row =  options.dataViews[0].table.rows[rowIndex]
 
+
+                //associate target with both source and target if the target is available
+                const selectionId = this.host.createSelectionIdBuilder().withTable(options.dataViews[0].table, rowIndex).createSelectionId()
+                const selectionIdKey = selectionId.getKey()
+                const tmpRecord : Record<string,powerbi.extensibility.ISelectionId> = {};
+                tmpRecord[selectionIdKey] = selectionId
                 
-                console.log(row)
                 var source: CustomNode = {
                     label: row[source_column_index].toString(),
                     //TODO: can probably simplify this
                     fill: source_fill_column_index > -1 && typeof row[source_fill_column_index] === "string" ? row[source_fill_column_index].toString()  : undefined,
                     size: source_size_column_index > -1 && typeof row[source_size_column_index] === "string" && !Number.isNaN(Number(row[source_size_column_index])) ? Number(row[source_size_column_index]) : undefined,
-                    selectionId: this.host.createSelectionIdBuilder().withTable(options.dataViews[0].table, rowIndex).createSelectionId()
+                    selections: tmpRecord
                 }
 
                 if (source.label in nodes){
@@ -173,6 +192,10 @@ export class Visual implements IVisual {
                     if (!nodes[source.label].size){
                         nodes[source.label].size = source.size
                     }
+
+                    if (!(selectionIdKey in nodes[source.label].selections)){
+                        nodes[source.label].selections[selectionIdKey] = selectionId
+                    }
                 }else{
                     nodes[source.label] = source
                 }
@@ -181,12 +204,18 @@ export class Visual implements IVisual {
                 
                 if (row[target_column_index] && row[target_column_index] !== null){
                     target = {
-                        label: row[target_column_index].toString()
+                        label: row[target_column_index].toString(),
+                        selections: tmpRecord
                     }
 
                     if (target.label in nodes){
                         if(!nodes[target.label].fill){
                             nodes[target.label].fill = target.fill
+                        }
+
+                        if(!(selectionIdKey in nodes[target.label].selections)){
+                            //TODO: figure out the logic behind this
+                            //nodes[target.label].selections[selectionIdKey] = selectionId
                         }
 
                     }else{
@@ -197,7 +226,7 @@ export class Visual implements IVisual {
 		        //create a link if both source and target exist
 		        if(source && target){
 
-                    //TODO: abstract this to an "advanced parameter" of the visuals
+                    //TODO: abstract the <SEPERATOR> to an "advanced parameter" to prevent undefined behaviour
 			        const link_key = `${source.label}<SEPERATOR>${target.label}`
 			        if(source && target && ! (link_key in links)){
 				        links[link_key] = <CustomLink>{
@@ -212,35 +241,26 @@ export class Visual implements IVisual {
                 }
             }
 
-        const radius = this.formattingSettings.SourceSettings.radius.value || 15
-
         const simulation = d3.forceSimulation<CustomNode>(Object.keys(nodes).map((k) => nodes[k]))
-            .force("link", d3.forceLink<CustomNode, CustomLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => this.formattingSettings.LinkSettings.distance.value))
-            .force("charge", d3.forceManyBody().strength(this.formattingSettings.LinkSettings.gravity.value || -30))
+            .force("link", d3.forceLink<CustomNode, CustomLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => formattingDistance))
+            .force("charge", d3.forceManyBody().strength(formattingGravity))
 
         const node_element = this.svg.select("#node_group_" + this.id)
             .selectAll("circle")
             .data<CustomNode>(Object.keys(nodes).map((k)=> nodes[k]))
             .join("circle")
-            .attr("r", (d) => d.size || radius)
+            .attr("r", (d) => d.size || formattingRadius)
             .attr("stroke",d => "#0A0A0A")
             .attr("stroke-width",d => 2.5)
-            .attr("fill", d => d.fill || this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF")
+            .attr("fill", d => d.fill || formattingColor)
             .call(d3.drag<SVGCircleElement,CustomNode>()
                     .on("start", drag_start)
                     .on("drag", drag)
                     .on("end", drag_end)
             )
-            .on("click", (event, data) => {
-                if (event.defaultPrevented) return;
+            .on("click", (event, data) => node_click(event,data))
 
-                console.log(this.selectionManager)
-    
-                this.selectionManager.select(data.selectionId)
-    
-                console.log("Event: ", event)
-                console.log("Selection changed: ", data)
-            })
+        const background_element = this.svg.select("#background_" + this.id)
 
         const label_element = this.svg.select("#label_group_" + this.id)
             .selectAll("text")
@@ -256,19 +276,21 @@ export class Visual implements IVisual {
             .attr("stroke-opacity", this.formattingSettings.LinkSettings.opacity.value * 0.01 || 0.6)
             .attr("stroke-width", d => this.formattingSettings.LinkSettings.width.value || 5);
 
+        // clear the background when the user clicks on an invisible background element
+        background_element.on("click",(event,d) => background_click(event,d))
+
         // Set the position attributes of links and nodes each time the simulation ticks.
         simulation.on("tick", () => {
-
             // [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight]
             node_element
                 .attr("cx", (d) => {
                     //Bounds checking to ensure nodes don't leave the visual space
-                    if (d.x - radius < (-this.target.clientWidth / 2)){
-                        d.x = (-this.target.clientWidth / 2) + radius
+                    if (d.x - formattingRadius < (-this.target.clientWidth / 2)){
+                        d.x = (-this.target.clientWidth / 2) + formattingRadius
                         d.vx = -d.vx
                     }
-                    if (d.x + radius > (this.target.clientWidth / 2)){
-                        d.x = (this.target.clientWidth / 2) - radius
+                    if (d.x + formattingRadius > (this.target.clientWidth / 2)){
+                        d.x = (this.target.clientWidth / 2) - formattingRadius
                         d.vx = -d.vx
                     }
 
@@ -277,13 +299,13 @@ export class Visual implements IVisual {
                 })
                 .attr("cy", (d) => {
                     //Bounds checking to ensure nodes don't leave the visual space
-                    if (d.y - radius < (-this.target.clientHeight / 2)){
-                        d.y = (-this.target.clientHeight / 2) + radius
+                    if (d.y - formattingRadius < (-this.target.clientHeight / 2)){
+                        d.y = (-this.target.clientHeight / 2) + formattingRadius
                         d.vy = -d.vy
                     }
 
-                    if (d.y + radius > (this.target.clientHeight / 2)){
-                        d.y = (this.target.clientHeight / 2) - radius
+                    if (d.y + formattingRadius > (this.target.clientHeight / 2)){
+                        d.y = (this.target.clientHeight / 2) - formattingRadius
                         d.vy = -d.vy
                     }
 
@@ -292,8 +314,8 @@ export class Visual implements IVisual {
                 })
 
             label_element
-                .attr("x", d => d.x + this.formattingSettings.SourceSettings.radius.value || 15)
-                .attr("y", d => d.y - this.formattingSettings.SourceSettings.radius.value || 15)
+                .attr("x", d => d.x + formattingRadius)
+                .attr("y", d => d.y - formattingRadius)
 
 
             link_element
@@ -303,9 +325,26 @@ export class Visual implements IVisual {
                 .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
         });
 
-        
+        //interactions
 
-        
+        let node_click = (event, data) => {
+            if (event.defaultPrevented) return;
+            console.log(this.selectionManager)
+
+            this.selectionManager.select(Object.values(data.selections))
+
+            console.log("Changing color")
+            node_element.attr("fill", (d) => "#FF0000" )
+
+            console.log("Event: ", event)
+            console.log("Selection changed: ", data)
+        }
+
+        let background_click = (event, data) => {
+            node_element.attr("fill", (d) => d.fill || formattingColor )
+            this.selectionManager.clear()
+        }
+
         function drag_start(event){
             if (!event.active) {
                 simulation.alphaTarget(0.3).restart()
