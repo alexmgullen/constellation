@@ -329,19 +329,28 @@ export class Visual implements IVisual {
 
         let node_click = (event, data) => {
             if (event.defaultPrevented) return;
-            console.log(this.selectionManager)
 
             this.selectionManager.select(Object.values(data.selections))
 
-            console.log("Changing color")
-            node_element.attr("fill", (d) => "#FF0000" )
-
-            console.log("Event: ", event)
-            console.log("Selection changed: ", data)
+            node_element
+                .attr("fill", (d) => {
+                    if (d.label === data.label){
+                        return d.fill || formattingColor
+                    }
+                    return `${d.fill || formattingColor }66`
+                })
+                .attr("stroke", (d) => {
+                    if (d.label === data.label){
+                        return "#0A0A0A"
+                    }
+                    return "#0A0A0A66"
+                })
         }
 
         let background_click = (event, data) => {
-            node_element.attr("fill", (d) => d.fill || formattingColor )
+            node_element
+                .attr("fill", (d) => d.fill || formattingColor )
+                .attr("stroke", (d) => "#0A0A0A")
             this.selectionManager.clear()
         }
 
