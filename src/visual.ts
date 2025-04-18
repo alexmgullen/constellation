@@ -54,6 +54,11 @@ interface DataNode extends d3.SimulationNodeDatum{
         // fixed position if position is fixed
         fx?: number | null | undefined;
         fy?: number | null | undefined;
+
+    /*
+        custom values
+    */
+        label: string;
 }
 
 interface DataLink extends d3.SimulationLinkDatum<DataNode>{
@@ -192,31 +197,46 @@ export class Visual implements IVisual {
             console.log("categories:", categories)
             console.log("data", data)
 
-            data.forEach((target) => {
+            data.forEach((target,targetIndex) => {
                 console.log("target: ", target)
 
-                target.values[0].values.forEach((dummy, index) => {
-                    
-                    if (dummy){
-                        
-                        console.log("categories, index: ", categories[index])
 
-                        /*
-                        if(categories[index].toString() in nodes === false){
-                            temp_nodes[categories[index].toString()] = {}
+                //Create a node for target if it exists
+
+                if (target.name){
+                    console.log("target", target)
+                    if(target.name.toString() in nodes == false){
+                        nodes[target.name.toString()] = <DataNode>{
+                            label: target.name.toString()
                         }
+                    }
+                }
+                // Create a node for each source if they exist
 
-                        temp_nodes[categories[index].toString()][target.name] = true
-                        */
-                        
+                target.values[0].values.forEach((distance, distanceIndex) => {
+                    
+                    if (distance){
+                        console.log("categories, index: ", categories[distanceIndex])
+
+                        if(categories[distanceIndex].toString() in nodes == false){
+                            nodes[categories[distanceIndex].toString()] = <DataNode>{
+                                label: categories[distanceIndex].toString()
+                            }
+                        }
+                    }
+
+                    //Create a link if the source and the target are valid
+                    if (target.name && distance){
+                        links[target.name + "<SEPERATOR>" + categories[distanceIndex].toString()] = <DataLink>{
+                            source: nodes[target.name.toString()],
+                            target: nodes[categories[distanceIndex].toString()]
+                        }
                     }
                 })
             })
 
-
             console.log("nodes: ", nodes)
             console.log("links: ", links)
-
     
         }catch(e){
             this.renderingEvents.renderingFailed(options, <string>e);
