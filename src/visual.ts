@@ -80,6 +80,8 @@ interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
 
 }
 
+
+
 export class Visual implements IVisual {
     private host: IVisualHost;
     private target: HTMLElement;
@@ -94,8 +96,6 @@ export class Visual implements IVisual {
 
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
-        console.debug("Constellation #",this.id," Constructed")
-        console.log(options)
         
         this.host = options.host
         this.target = options.element;
@@ -131,7 +131,56 @@ export class Visual implements IVisual {
 
     }
 
-    public update(options: VisualUpdateOptions) {
+    public update(options: VisualUpdateOptions){
+        this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
+
+        const temp_nodes = {}
+        try{
+
+            this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
+
+            //parse formatting settings
+            const formattingRadius = this.formattingSettings.SourceSettings.radius.value || 15
+            const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 75
+            const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
+            const formattingColor = this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF"
+
+            const categories = options.dataViews[0].categorical.categories[0].values;
+            
+            const data = options.dataViews[0].categorical.values.grouped();
+
+            console.log("categories:", categories)
+            console.log("data", data)
+
+            data.forEach((target) => {
+                console.log("target: ", target)
+
+                target.values[0].values.forEach((dummy, index) => {
+                    
+                    if (dummy){
+                        console.log(index)
+                        console.log(target.name, "linked to: ", categories[index])
+                        if(categories[index].toString() in temp_nodes === false){
+                            temp_nodes[categories[index].toString()] = {}
+                        }
+
+                        temp_nodes[categories[index].toString()][target.name] = true
+                        
+                    }
+                })
+            })
+
+
+            console.log("temp nodes: ", temp_nodes)
+
+    
+        }catch(update_exception){
+            console.error("update exception: ", update_exception)
+
+        }
+    }
+
+    public old_update(options: VisualUpdateOptions) {
 
         //update the size of the svg to match the container
         this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
