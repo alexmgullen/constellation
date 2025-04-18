@@ -40,6 +40,31 @@ import { VisualFormattingSettingsModel } from "./settings";
 
 import { v4 as uuid } from "uuid";
 
+interface DataNode extends d3.SimulationNodeDatum{
+    /*
+        inherited values
+    */
+        index?: number | undefined;
+        // current postion 
+        x?: number | undefined;
+        y?: number | undefined;
+        // velocities
+        vx?: number | undefined;
+        vy?: number | undefined;
+        // fixed position if position is fixed
+        fx?: number | null | undefined;
+        fy?: number | null | undefined;
+}
+
+interface DataLink extends d3.SimulationLinkDatum<DataNode>{
+    /*
+        inherited values
+    */
+    source: string | CustomNode;
+    target: string | CustomNode;
+    index?: number | undefined;
+}
+
 interface CustomNode extends d3.SimulationNodeDatum{
     /*
         base class functions
@@ -81,6 +106,11 @@ interface CustomLink extends d3.SimulationLinkDatum<CustomNode>{
 }
 
 
+class ParameterError extends Error {
+    constructor(message, options){
+        super(message, options)
+    }
+}
 
 export class Visual implements IVisual {
     private host: IVisualHost;
@@ -134,8 +164,18 @@ export class Visual implements IVisual {
     public update(options: VisualUpdateOptions){
         this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
 
-        const temp_nodes = {}
+        const nodes: Record<string,DataNode> = {};
+        const links: Record<string,DataLink> = {};
         try{
+
+            if (!options.dataViews 
+                || !options.dataViews[0] 
+                || !options.dataViews[0].categorical
+                || !options.dataViews[0].categorical.values
+                || !options.dataViews[0].categorical.values.grouped
+            ){
+                throw new ParameterError("Not enough parameters, Make sure the Sources, Targets and Distances Columns are populated",{});
+            }
 
             this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
 
@@ -158,25 +198,34 @@ export class Visual implements IVisual {
                 target.values[0].values.forEach((dummy, index) => {
                     
                     if (dummy){
-                        console.log(index)
-                        console.log(target.name, "linked to: ", categories[index])
-                        if(categories[index].toString() in temp_nodes === false){
+                        
+                        console.log("categories, index: ", categories[index])
+
+                        /*
+                        if(categories[index].toString() in nodes === false){
                             temp_nodes[categories[index].toString()] = {}
                         }
 
                         temp_nodes[categories[index].toString()][target.name] = true
+                        */
                         
                     }
                 })
             })
 
 
-            console.log("temp nodes: ", temp_nodes)
+            console.log("nodes: ", nodes)
+            console.log("links: ", links)
 
     
-        }catch(update_exception){
-            console.error("update exception: ", update_exception)
+        }catch(e){
+            this.renderingEvents.renderingFailed(options, <string>e);
 
+            if( e instanceof ParameterError){
+                this.host.displayWarningIcon("Invalid Parameter",e.toString())
+            }else{
+                this.host.displayWarningIcon("Error",e.toString())
+            }
         }
     }
 
