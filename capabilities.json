@@ -11,24 +11,33 @@
             "kind": "Grouping"
         },
         {
-            "displayName": "Souce - Size",
-            "name": "source_size",
-            "kind": "Grouping"
-        },
+            "displayName": "Targets",
+            "name": "dummy",
+            "kind": "Measure"
+        }
+
+    ],
+    "dataViewMappings": [
         {
-            "displayName": "Source - Color",
-            "name": "source_fill",
-            "kind": "Grouping"
-        },
-        {
-            "displayName": "Link Distance",
-            "name": "distance",
-            "kind": "Grouping"
-        },
-        {
-            "displayName": "Link color",
-            "name": "link_color",
-            "kind": "Grouping"
+            "conditions": 
+            [
+                {
+                    "source_node":  {"min":1, "max": 1},
+                    "target_node":  {"min":1, "max": 1},
+                    "dummy":        {"min":1, "max": 1}
+                }
+            ],
+            "categorical": {
+                "categories": { "for": { "in": "source_node"}},
+                "values": { 
+                    "group": {
+                        "by": "target_node",
+                        "select": [
+                            { "bind": { "to": "dummy"}}  
+                        ]
+                    }
+                }
+            }
         }
     ],
     "objects": {
@@ -84,46 +93,5 @@
             }
         }
     },
-    "dataViewMappings": [
-        {
-            "table": {
-                "rows": {
-                    "select": [
-                        {
-                            "for": {
-                                "in": "source_node"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "source_fill"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "source_size"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "target_node"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "distance"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "link_color"
-                            }
-
-                        }
-                    ]
-                }
-            }
-        }
-    ],
     "privileges": []
 }
