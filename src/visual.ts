@@ -185,6 +185,7 @@ export class Visual implements IVisual {
             this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
 
             //parse formatting settings
+            const formattingSeperator: string = this.formattingSettings.AdvancedSettings.seperator.value || "<SEPERATOR>"
             const formattingRadius = this.formattingSettings.SourceSettings.radius.value || 15
             const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 75
             const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
@@ -227,7 +228,7 @@ export class Visual implements IVisual {
 
                     //Create a link if the source and the target are valid
                     if (target.name && distance){
-                        links[target.name + "<SEPERATOR>" + categories[distanceIndex].toString()] = <DataLink>{
+                        links[target.name + formattingSeperator + categories[distanceIndex].toString()] = <DataLink>{
                             source: nodes[target.name.toString()],
                             target: nodes[categories[distanceIndex].toString()]
                         }

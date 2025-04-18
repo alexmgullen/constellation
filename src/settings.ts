@@ -105,6 +105,20 @@ class LinkSettings extends FormattingSettingsCard {
     slices: Array<FormattingSettingsSlice> = [this.distance,this.gravity,this.width,this.color,this.opacity];
 }
 
+class AdvancedSettings extends FormattingSettingsCard{
+    seperator = new formattingSettings.TextInput({
+        name: "advanced_seperator",
+        displayName: "Seperator used internally in list",
+        value: "<SEPERATOR>",
+        placeholder: "<SEPERATOR>",
+        visible: true
+    })
+
+    name: string = "advanced";
+    displayName: string = "Advanced Visual Options";
+    slices: Array<FormattingSettingsSlice> = [this.seperator];
+}
+
 /**
 * visual settings model class
 *
@@ -114,6 +128,7 @@ export class VisualFormattingSettingsModel extends FormattingSettingsModel {
 
     SourceSettings = new SourceSettings()
     LinkSettings = new LinkSettings()
+    AdvancedSettings = new AdvancedSettings()
 
-    cards = [this.SourceSettings,this.LinkSettings];
+    cards = [this.SourceSettings,this.LinkSettings,this.AdvancedSettings];
 }

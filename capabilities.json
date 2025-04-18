@@ -89,6 +89,15 @@
                     }
                 }
             }
+        },
+        "advanced": {
+            "properties": {
+                "advanced_seperator": {
+                    "type": {
+                        "text": true
+                    }
+                }
+            }
         }
     },
     "privileges": []
