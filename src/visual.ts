@@ -115,11 +115,11 @@ export class Visual implements IVisual {
 
             //Create an invisible background for the canvas to allow background clicks to clear selection
             this.svg.append("g").attr("id","background_" + this.id).append("rect")
-            .attr("x",-this.target.clientWidth / 2)
-            .attr("y",-this.target.clientHeight / 2)
-            .attr("width",this.target.clientWidth)
-            .attr("height",this.target.clientHeight)
-            .attr("fill","rgb(0 0 0 / 0%)")
+                .attr("x",-this.target.clientWidth / 2)
+                .attr("y",-this.target.clientHeight / 2)
+                .attr("width",this.target.clientWidth)
+                .attr("height",this.target.clientHeight)
+                .attr("fill","rgb(0 0 0 / 0%)")
 
             this.svg.append("g").attr("id","link_group_" + this.id)
 
@@ -129,9 +129,6 @@ export class Visual implements IVisual {
 
             console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
-        console.log("svg: ", this.svg)
-
-
     }
 
     public update(options: VisualUpdateOptions){
@@ -161,7 +158,6 @@ export class Visual implements IVisual {
             }
 
             
-
             const categoryColumn = options.dataViews[0].categorical.categories[0];
             const categories = options.dataViews[0].categorical.categories[0].values;
             
@@ -220,10 +216,7 @@ export class Visual implements IVisual {
                 })
             })
 
-            console.log("nodes: ", nodes)
-            console.log("links: ", links)
-
-
+            //Start of simulation recreations
 
             this.renderingEvents.renderingStarted(options);
             const simulation = d3.forceSimulation<DataNode>(Object.keys(nodes).map((k) => nodes[k]))
@@ -243,133 +236,154 @@ export class Visual implements IVisual {
                         .on("drag", drag)
                         .on("end", drag_end)
                 )
-                .on("click", (event, data) => node_click(event,data))
-
-                const background_element = this.svg.select("#background_" + this.id)
-
-                const label_element = this.svg.select("#label_group_" + this.id)
-                    .selectAll("text")
-                    .data<DataNode>(Object.keys(nodes).map((k) => nodes[k]))
-                    .join("text")
-                    .text((d) => d.label)
-                    
-                const link_element = this.svg.select("#link_group_" + this.id)
-                    .selectAll('line')
-                    .data(Object.keys(links).map((k) => links[k]))
-                    .join('line')
-                    .attr("stroke", d => d.fill || this.formattingSettings.LinkSettings.color.value.value || "#999999")
-                    .attr("stroke-opacity", this.formattingSettings.LinkSettings.opacity.value * 0.01 || 0.6)
-                    .attr("stroke-width", d => this.formattingSettings.LinkSettings.width.value || 5);
+                .on("click", (event, d) => node_click(event,d))
+                .on("contextmenu", (event, d) => node_contextmenu(event,d))
 
                 // clear the background when the user clicks on an invisible background element
-                background_element.on("click",(event,d) => background_click(event,d))
+            const background_element = this.svg.select("#background_" + this.id)
+                .on("click",(event,d) => background_click(event,d))
+                .on("contextmenu", (event,d) => background_contextmenu(event,d))
 
-                // Set the position attributes of links and nodes each time the simulation ticks.
-                simulation.on("tick", () => {
-                    // [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight]
-                    node_element
-                        .attr("cx", (d) => {
-                            //Bounds checking to ensure nodes don't leave the visual space
-                            if (d.x - formattingRadius < (-this.target.clientWidth / 2)){
-                                d.x = (-this.target.clientWidth / 2) + formattingRadius
-                                d.vx = -d.vx
-                            }
-                            if (d.x + formattingRadius > (this.target.clientWidth / 2)){
-                                d.x = (this.target.clientWidth / 2) - formattingRadius
-                                d.vx = -d.vx
-                            }
+            const label_element = this.svg.select("#label_group_" + this.id)
+                .selectAll("text")
+                .data<DataNode>(Object.keys(nodes).map((k) => nodes[k]))
+                .join("text")
+                .text((d) => d.label)
+                    
+            const link_element = this.svg.select("#link_group_" + this.id)
+                .selectAll('line')
+                .data(Object.keys(links).map((k) => links[k]))
+                .join('line')
+                .attr("stroke", d => d.fill || this.formattingSettings.LinkSettings.color.value.value || "#999999")
+                .attr("stroke-opacity", this.formattingSettings.LinkSettings.opacity.value * 0.01 || 0.6)
+                .attr("stroke-width", d => this.formattingSettings.LinkSettings.width.value || 5);
 
-                            //Regular behaviour if nodes are inside the bounds of our visual
-                            return d.x
-                        })
-                        .attr("cy", (d) => {
-                            //Bounds checking to ensure nodes don't leave the visual space
-                            if (d.y - formattingRadius < (-this.target.clientHeight / 2)){
-                                d.y = (-this.target.clientHeight / 2) + formattingRadius
-                                d.vy = -d.vy
-                            }
+            // Set the position attributes of links and nodes each time the simulation ticks.
+            simulation.on("tick", () => {
+                // [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight]
+                node_element
+                    .attr("cx", (d) => {
+                        //Bounds checking to ensure nodes don't leave the visual space
+                        if (d.x - formattingRadius < (-this.target.clientWidth / 2)){
+                            d.x = (-this.target.clientWidth / 2) + formattingRadius
+                            d.vx = -d.vx
+                        }
+                        if (d.x + formattingRadius > (this.target.clientWidth / 2)){
+                            d.x = (this.target.clientWidth / 2) - formattingRadius
+                            d.vx = -d.vx
+                        }
 
-                            if (d.y + formattingRadius > (this.target.clientHeight / 2)){
-                                d.y = (this.target.clientHeight / 2) - formattingRadius
-                                d.vy = -d.vy
-                            }
+                        //Regular behaviour if nodes are inside the bounds of our visual
+                        return d.x
+                    })
+                    .attr("cy", (d) => {
+                        //Bounds checking to ensure nodes don't leave the visual space
+                        if (d.y - formattingRadius < (-this.target.clientHeight / 2)){
+                            d.y = (-this.target.clientHeight / 2) + formattingRadius
+                            d.vy = -d.vy
+                        }
 
-                            //Regular behaviour if nodes are inside the bounds of our visual
-                            return d.y
-                        })
+                        if (d.y + formattingRadius > (this.target.clientHeight / 2)){
+                            d.y = (this.target.clientHeight / 2) - formattingRadius
+                            d.vy = -d.vy
+                        }
 
-                    label_element
-                        .attr("x", d => d.x + formattingRadius)
-                        .attr("y", d => d.y - formattingRadius)
+                        //Regular behaviour if nodes are inside the bounds of our visual
+                        return d.y
+                    })
+
+                label_element
+                    .attr("x", d => d.x + formattingRadius)
+                    .attr("y", d => d.y - formattingRadius)
 
 
-                    link_element
-                        .attr("x1", d => typeof d.source !== "string" ? d.source.x : undefined)
-                        .attr("y1", d => typeof d.source !== "string" ? d.source.y : undefined)
-                        .attr("x2", d => typeof d.target !== "string" ? d.target.x : undefined)
-                        .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
-                });
+                link_element
+                    .attr("x1", d => typeof d.source !== "string" ? d.source.x : undefined)
+                    .attr("y1", d => typeof d.source !== "string" ? d.source.y : undefined)
+                    .attr("x2", d => typeof d.target !== "string" ? d.target.x : undefined)
+                    .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
+            });
 
-                //interactions
-                let node_click = (event, data) => {
-                    if (event.defaultPrevented) return;
+            //interactions
+            let node_click = (event, data) => {
+                if (event.defaultPrevented) return;
 
-                    this.selectionManager.select(data.selectionId)
+                this.selectionManager.select(data.selectionId)
 
-                    node_element
-                        .attr("fill", (d) => {
-                            if (d.label === data.label){
-                                return d.fill || formattingColor
-                            }
-                            return `${d.fill || formattingColor }66`
-                        })
-                        .attr("stroke", (d) => {
-                            if (d.label === data.label){
-                                return "#0A0A0A"
-                            }
-                            return "#0A0A0A66"
-                        })
+                node_element
+                    .attr("fill", (d) => {
+                        if (d.label === data.label){
+                            return d.fill || formattingColor
+                        }
+                        return `${d.fill || formattingColor }66`
+                    })
+                    .attr("stroke", (d) => {
+                        if (d.label === data.label){
+                            return "#0A0A0A"
+                        }
+                        return "#0A0A0A66"
+                    })
                 }
 
-                let background_click = (event, data) => {
-                    console.log("background cleard")
-                    node_element
-                        .attr("fill", (d) => d.fill || formattingColor )
-                        .attr("stroke", (d) => "#0A0A0A")
-                    this.selectionManager.clear()
-                }
+            let node_contextmenu = (event, data) => {
+                event.preventDefault()
+                console.log("node clicked")
+                console.log(data.selectionId)
+                this.selectionManager.showContextMenu(data.selectionId,{
+                    x: event.clientX,
+                    y: event.clientY
+                })
+            }
 
-                function drag_start(event){
-                    if (!event.active) {
-                        simulation.alphaTarget(0.3).restart()
-                    }
-                    event.subject.fx = event.subject.x
-                    event.subject.fy = event.subject.y
-                }
+            let background_click = (event, data) => {
+                console.log("background clicked")
+                node_element
+                    .attr("fill", (d) => d.fill || formattingColor )
+                    .attr("stroke", (d) => "#0A0A0A")
+                this.selectionManager.clear()
+            }
 
-                function drag(event){
-                    event.subject.fx = event.x
-                    event.subject.fy = event.y
-                }
+            let background_contextmenu = (event, data) => {
+                event.preventDefault()
+                console.log("background contextemneud")
+                this.selectionManager.showContextMenu({},{
+                    x: event.clientX,
+                    y: event.clientY
+                })
 
-                function drag_end(event){
-                    if (!event.active) simulation.alphaTarget(0)
-                    event.subject.fx = null
-                    event.subject.fy = null
-                }
+            }
 
-                this.renderingEvents.renderingFinished(options);
+            function drag_start(event){
+                if (!event.active) {
+                    simulation.alphaTarget(0.3).restart()
+                }
+                event.subject.fx = event.subject.x
+                event.subject.fy = event.subject.y
+            }
+
+            function drag(event){
+                event.subject.fx = event.x
+                event.subject.fy = event.y
+            }
+
+            function drag_end(event){
+                if (!event.active) simulation.alphaTarget(0)
+                event.subject.fx = null
+                event.subject.fy = null
+            }
+
+            this.renderingEvents.renderingFinished(options);
         
-            }catch(e){
-                this.renderingEvents.renderingFailed(options, <string>e);
+        }catch(e){
+            this.renderingEvents.renderingFailed(options, <string>e);
 
-                if( e instanceof ParameterError){
-                    this.host.displayWarningIcon("Invalid Parameter",e.toString())
-                }else{
+            if( e instanceof ParameterError){
+                this.host.displayWarningIcon("Invalid Parameter",e.toString())
+            }else{
                     this.host.displayWarningIcon("Error",e.toString())
-                }
             }
         }
+    }
 
     /**
      * Returns properties pane formatting model content hierarchies, properties and latest formatting values, Then populate properties pane.
