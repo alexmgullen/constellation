@@ -59,9 +59,9 @@ interface DataNode extends d3.SimulationNodeDatum{
         custom values
     */
     label: string;
-    fill?: string | undefined;
-    radius?: number;
-    selectionId?: powerbi.extensibility.ISelectionId;
+    fill: string;
+    radius: number;
+    selectionId: powerbi.extensibility.ISelectionId;
 }
 
 interface DataLink extends d3.SimulationLinkDatum<DataNode>{
@@ -162,6 +162,7 @@ export class Visual implements IVisual {
 
             
 
+            const categoryColumn = options.dataViews[0].categorical.categories[0];
             const categories = options.dataViews[0].categorical.categories[0].values;
             
             const targets = options.dataViews[0].categorical.values.grouped();
@@ -190,7 +191,21 @@ export class Visual implements IVisual {
 
                         if(categories[distanceIndex].toString() in nodes == false){
                             nodes[categories[distanceIndex].toString()] = <DataNode>{
-                                label: categories[distanceIndex].toString()
+                                label: categories[distanceIndex].toString(),
+                                fill: formattingColor,
+                                radius: formattingRadius,
+                                selectionId: this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId()
+                            }
+                        }else{
+                            //if the node exists in nodes, but is missing some values, populate those values.
+                            if(!nodes[categories[distanceIndex].toString()].fill){
+                                nodes[categories[distanceIndex].toString()].fill = formattingColor;
+                            }
+                            if(!nodes[categories[distanceIndex].toString()].radius){
+                                nodes[categories[distanceIndex].toString()].radius = formattingRadius;
+                            }
+                            if(!nodes[categories[distanceIndex].toString()].selectionId){
+                                nodes[categories[distanceIndex].toString()].selectionId = this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId();
                             }
                         }
                     }
@@ -299,7 +314,7 @@ export class Visual implements IVisual {
                 let node_click = (event, data) => {
                     if (event.defaultPrevented) return;
 
-                    this.selectionManager.select(Object.values(data.selections))
+                    this.selectionManager.select(data.selectionId)
 
                     node_element
                         .attr("fill", (d) => {
@@ -317,6 +332,7 @@ export class Visual implements IVisual {
                 }
 
                 let background_click = (event, data) => {
+                    console.log("background cleard")
                     node_element
                         .attr("fill", (d) => d.fill || formattingColor )
                         .attr("stroke", (d) => "#0A0A0A")
