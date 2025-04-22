@@ -31,43 +31,22 @@ import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 import powerbi from "powerbi-visuals-api"
 import data = powerbi.data
 
-import FormattingSettingsCard = formattingSettings.SimpleCard;
-import FormattingSettingsSlice = formattingSettings.Slice;
 import FormattingSettingsModel = formattingSettings.Model;
+
+import { DataNode } from "./visual"
+import { ColorPicker, SimpleCard } from "powerbi-visuals-utils-formattingmodel/lib/FormattingSettingsComponents";
 
 /**
  * Data Point Formatting Card
  */
 
-class SourceSettings extends FormattingSettingsCard {
-
-    node_color = new formattingSettings.ColorPicker({
-        name: "color",
-        displayName: "Default Color",
-        value: { value: "#A0A0A0" },
-        visible: true
-    });
-
-    radius = new formattingSettings.NumUpDown({
-        name: "radius",
-        displayName: "Node Radius",
-        value: 15,
-        visible: true
-    })
-
-    name: string = "source";
-    displayName: string = "Source Node Options";
-    slices: Array<FormattingSettingsSlice> = [this.node_color,this.radius];
+class NodeSettings extends formattingSettings.SimpleCard {
+    name: string = "node";
+    displayName: string = "Node Formatting";
+    slices: formattingSettings.Slice[] = [];
 }
 
-class LinkSettings extends FormattingSettingsCard {
-
-    distance = new formattingSettings.NumUpDown({
-        name: "link_distance",
-        displayName: "Distance between nodes",
-        value: 75,
-        visible: true
-    })
+class LinkSettings extends formattingSettings.SimpleCard {
 
     gravity = new formattingSettings.NumUpDown({
         name: "link_gravity",
@@ -76,17 +55,17 @@ class LinkSettings extends FormattingSettingsCard {
         visible: true
     })
 
-    width = new formattingSettings.NumUpDown({
-        name: "link_width",
-        displayName: "Link Width",
-        value: 15,
-        visible: true
-    })
-
     color = new formattingSettings.ColorPicker({
         name: "link_color",
         displayName: "Color",
         value: { value: "#999999" },
+        visible: true
+    })
+
+    width = new formattingSettings.NumUpDown({
+        name: "width",
+        displayName: "Line Width",
+        value: 10,
         visible: true
     })
 
@@ -102,10 +81,10 @@ class LinkSettings extends FormattingSettingsCard {
 
     name: string = "link";
     displayName: string = "Link Settings"
-    slices: Array<FormattingSettingsSlice> = [this.distance,this.gravity,this.width,this.color,this.opacity];
+    slices: Array<formattingSettings.Slice> = [this.gravity,this.width,this.color,this.opacity];
 }
 
-class AdvancedSettings extends FormattingSettingsCard{
+class AdvancedSettings extends formattingSettings.SimpleCard{
     seperator = new formattingSettings.TextInput({
         name: "advanced_seperator",
         displayName: "Seperator used internally in list",
@@ -116,7 +95,7 @@ class AdvancedSettings extends FormattingSettingsCard{
 
     name: string = "advanced";
     displayName: string = "Advanced Visual Options";
-    slices: Array<FormattingSettingsSlice> = [this.seperator];
+    slices: Array<formattingSettings.Slice> = [this.seperator];
 }
 
 /**
@@ -126,9 +105,25 @@ class AdvancedSettings extends FormattingSettingsCard{
 export class VisualFormattingSettingsModel extends FormattingSettingsModel {
     // Create formatting settings model formatting cards
 
-    SourceSettings = new SourceSettings()
-    LinkSettings = new LinkSettings()
-    AdvancedSettings = new AdvancedSettings()
+    nodeSettings = new NodeSettings()
+    linkSettings = new LinkSettings()
+    advancedSettings = new AdvancedSettings()
+    cards: Array<SimpleCard> = [this.nodeSettings,this.linkSettings,this.advancedSettings]
 
-    cards = [this.SourceSettings,this.LinkSettings,this.AdvancedSettings];
+    populateNodeSettings(dataPoints: Record<string,DataNode>){
+        const slices: formattingSettings.Slice[] = this.nodeSettings.slices;
+
+        if(dataPoints){
+            Object.keys(dataPoints).forEach((key) => {
+                console.log(key)
+                slices.push(new ColorPicker({
+                    name: "fill",
+                    displayName: key,
+                    value: { value: dataPoints[key].fill },
+                    selector: dataPoints[key].selectionId ? (dataPoints[key].selectionId as any).getSelector() : undefined
+                }))
+            })
+        }
+
+    }
 }

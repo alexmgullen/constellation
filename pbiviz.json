@@ -4,10 +4,10 @@
         "displayName":"constellation",
         "guid":"constellationC3682F5F8D8B4E64AECF6369114FB8DD",
         "visualClassName":"Visual",
-        "version":"1.0.0.0",
+        "version":"2.0.0.0",
         "description":"Visualize Graphs or networks of interconnected nodes",
         "supportUrl":"grognard.ca",
-        "gitHubUrl":""
+        "gitHubUrl":"https://github.com/alexmgullen/constellation"
     },
     "apiVersion":"5.10.0",
     "author":{

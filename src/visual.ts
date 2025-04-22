@@ -26,7 +26,7 @@
 "use strict";
 
 import powerbi from "powerbi-visuals-api";
-import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
+import { formattingSettings, FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
 import "./../style/visual.less";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -40,7 +40,7 @@ import { VisualFormattingSettingsModel } from "./settings";
 
 import { v4 as uuid } from "uuid";
 
-interface DataNode extends d3.SimulationNodeDatum{
+export interface DataNode extends d3.SimulationNodeDatum{
     /*
         inherited values
     */
@@ -60,11 +60,12 @@ interface DataNode extends d3.SimulationNodeDatum{
     */
     label: string;
     fill: string;
+    stroke: string;
     radius: number;
     selectionId: powerbi.extensibility.ISelectionId;
 }
 
-interface DataLink extends d3.SimulationLinkDatum<DataNode>{
+export interface DataLink extends d3.SimulationLinkDatum<DataNode>{
     /*
         inherited values
     */
@@ -76,6 +77,8 @@ interface DataLink extends d3.SimulationLinkDatum<DataNode>{
         custom values
     */
     fill?: string;
+    distance: number;
+    stroke: string;
 }
 
 
@@ -92,10 +95,13 @@ export class Visual implements IVisual {
 
     private formattingSettings: VisualFormattingSettingsModel;
     private formattingSettingsService: FormattingSettingsService;
-    private svg: d3.Selection<Element,Object,Element,Object>;
 
     private renderingEvents: powerbi.extensibility.IVisualEventService;
     private selectionManager: powerbi.extensibility.ISelectionManager;
+
+    //Visual elements
+    private svg: d3.Selection<Element,Object,Element,Object>;
+    private nodes: Record<string,DataNode>;
 
     constructor(options: VisualConstructorOptions) {
         this.id = uuid()
@@ -111,7 +117,7 @@ export class Visual implements IVisual {
                 .attr("id","network" + this.id)
                 .attr('width',options.element.clientWidth)
                 .attr('height',options.element.clientHeight)
-                .attr("style", "width: 100%; height: 100%;");
+                .attr("style", "width: 100%; height: 100%;")
 
             //Create an invisible background for the canvas to allow background clicks to clear selection
             this.svg.append("g").attr("id","background_" + this.id).append("rect")
@@ -120,33 +126,37 @@ export class Visual implements IVisual {
                 .attr("width",this.target.clientWidth)
                 .attr("height",this.target.clientHeight)
                 .attr("fill","rgb(0 0 0 / 0%)")
-
+            
             this.svg.append("g").attr("id","link_group_" + this.id)
 
             this.svg.append("g").attr("id","node_group_" + this.id)
 
             this.svg.append("g").attr("id","label_group_" + this.id)
-
-            console.debug("constellation custom visual # ", this.id, " current svg:", this.svg)
         }
     }
 
     public update(options: VisualUpdateOptions){
+        this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0])
         this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
-
-        //parse formatting settings
-        this.formattingSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualFormattingSettingsModel, options.dataViews[0]);
-
-        const formattingSeperator: string = this.formattingSettings.AdvancedSettings.seperator.value || "<SEPERATOR>"
-        const formattingRadius = this.formattingSettings.SourceSettings.radius.value || 15
-        const formattingDistance = this.formattingSettings.LinkSettings.distance.value || 75
-        const formattingGravity = this.formattingSettings.LinkSettings.gravity.value || -30
-        const formattingColor = this.formattingSettings.SourceSettings.node_color.value.value || "#9D00FF"
-
-
-        const nodes: Record<string,DataNode> = {};
-        const links: Record<string,DataLink> = {};
         try{
+
+            
+            let formattingDefaultColor = "#00ff00";
+            let formattingDefaultRadius = 15
+
+
+            let formattingSeperator: string = "<SEPERATOR>";
+            let formattingDefaultGravity: number = -30;
+
+            if( this.formattingSettings ){
+                formattingSeperator = this.formattingSettings.advancedSettings.seperator.value || formattingSeperator;
+                formattingDefaultGravity = this.formattingSettings.linkSettings.gravity.value || formattingDefaultGravity;
+                //const formattingDefaultColor = this.formattingSettings.sourceSettings.defaultFill || "#00ff00";
+            }
+
+
+            this.nodes = {};
+            const links: Record<string,DataLink> = {};
 
             if (!options.dataViews 
                 || !options.dataViews[0] 
@@ -164,15 +174,15 @@ export class Visual implements IVisual {
             const targets = options.dataViews[0].categorical.values.grouped();
 
             targets.forEach((target,targetIndex) => {
-                console.log("target: ", target)
-
-
                 //Create a node for target if it exists
                 if (target.name){
-                    console.log("target", target)
-                    if(target.name.toString() in nodes == false){
-                        nodes[target.name.toString()] = <DataNode>{
-                            label: target.name.toString()
+                    if(target.name.toString() in this.nodes == false){
+                        this.nodes[target.name.toString()] = <DataNode>{
+                            label: target.name.toString(),
+                            fill: "#A0A0A0",
+                            stroke: "#0A0A0A",
+                            radius: formattingDefaultRadius,
+                            selectionId: undefined
                         }
                     }
                 }
@@ -183,25 +193,22 @@ export class Visual implements IVisual {
                     
                     // Create a node for each source if they exist
                     if (distance){
-                        console.log("categories, index: ", categories[distanceIndex])
 
-                        if(categories[distanceIndex].toString() in nodes == false){
-                            nodes[categories[distanceIndex].toString()] = <DataNode>{
+                        if(categories[distanceIndex].toString() in this.nodes == false){
+                            this.nodes[categories[distanceIndex].toString()] = <DataNode>{
                                 label: categories[distanceIndex].toString(),
-                                fill: formattingColor,
-                                radius: formattingRadius,
+                                fill: "#A0A0A0",
+                                stroke: "#0A0A0A",
+                                radius: formattingDefaultRadius,
                                 selectionId: this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId()
                             }
                         }else{
                             //if the node exists in nodes, but is missing some values, populate those values.
-                            if(!nodes[categories[distanceIndex].toString()].fill){
-                                nodes[categories[distanceIndex].toString()].fill = formattingColor;
+                            if(!this.nodes[categories[distanceIndex].toString()].radius){
+                                this.nodes[categories[distanceIndex].toString()].radius = formattingDefaultRadius;
                             }
-                            if(!nodes[categories[distanceIndex].toString()].radius){
-                                nodes[categories[distanceIndex].toString()].radius = formattingRadius;
-                            }
-                            if(!nodes[categories[distanceIndex].toString()].selectionId){
-                                nodes[categories[distanceIndex].toString()].selectionId = this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId();
+                            if(!this.nodes[categories[distanceIndex].toString()].selectionId){
+                                this.nodes[categories[distanceIndex].toString()].selectionId = this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId();
                             }
                         }
                     }
@@ -209,28 +216,57 @@ export class Visual implements IVisual {
                     //Create a link if the source and the target are valid
                     if (target.name && distance){
                         links[target.name + formattingSeperator + categories[distanceIndex].toString()] = <DataLink>{
-                            source: nodes[target.name.toString()],
-                            target: nodes[categories[distanceIndex].toString()]
+                            source: this.nodes[target.name.toString()],
+                            target: this.nodes[categories[distanceIndex].toString()],
+                            distance: distance
                         }
                     }
                 })
             })
 
+
+            console.log("dataview: ", options.dataViews)
+            console.log("nodes: ", this.nodes)
+            this.formattingSettings.populateNodeSettings(this.nodes)
+
+
+            console.log("formattings settings after pop: ", this.formattingSettings.nodeSettings)
+            
+
+            //Process formatting options
+            Object.keys(this.nodes).forEach((key) => {
+
+                /*
+                this.formattingSettings.sourceSettings.slices.forEach((formatValue) => {
+                    if(formatValue.name == "fill" && key === formatValue.displayName.substring(7)){
+                        console.log("format vlaue: ", formatValue, " : ", (formatValue as formattingSettings.ColorPicker).value.value)
+                        
+                        nodes[key].fill = (formatValue as formattingSettings.ColorPicker).value.value
+
+                        
+                        //nodes[key].fill = settings.fill.value.value
+                        //nodes[key].radius = settings.radius.value
+                    }
+                })
+
+                */
+            })
+
             //Start of simulation recreations
 
             this.renderingEvents.renderingStarted(options);
-            const simulation = d3.forceSimulation<DataNode>(Object.keys(nodes).map((k) => nodes[k]))
-            .force("link", d3.forceLink<DataNode, DataLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => formattingDistance))
-            .force("charge", d3.forceManyBody().strength(formattingGravity))
+            const simulation = d3.forceSimulation<DataNode>(Object.keys(this.nodes).map((k) => this.nodes[k]))
+            .force("link", d3.forceLink<DataNode, DataLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => d.distance))
+            .force("charge", d3.forceManyBody().strength(formattingDefaultGravity))
 
             const node_element = this.svg.select("#node_group_" + this.id)
                 .selectAll("circle")
-                .data<DataNode>(Object.keys(nodes).map((k)=> nodes[k]))
+                .data<DataNode>(Object.keys(this.nodes).map((k)=> this.nodes[k]))
                 .join("circle")
-                .attr("r", (d) => d.radius || formattingRadius)
-                .attr("stroke",d => "#0A0A0A")
-                .attr("stroke-width",d => 2.5)
-                .attr("fill", d => d.fill || formattingColor)
+                .attr("r", (d) => d.radius || formattingDefaultRadius)
+                .attr("stroke", (d) => d.stroke || "#0A0A0A")
+                .attr("stroke-width",(d) => 2.5)
+                .attr("fill", (d) => d.fill)
                 .call(d3.drag<SVGCircleElement,DataNode>()
                         .on("start", drag_start)
                         .on("drag", drag)
@@ -239,14 +275,14 @@ export class Visual implements IVisual {
                 .on("click", (event, d) => node_click(event,d))
                 .on("contextmenu", (event, d) => node_contextmenu(event,d))
 
-                // clear the background when the user clicks on an invisible background element
+            // clear the background when the user clicks on an invisible background element
             const background_element = this.svg.select("#background_" + this.id)
-                .on("click",(event,d) => background_click(event,d))
+                .on("click", (event,d) => background_click(event,d))
                 .on("contextmenu", (event,d) => background_contextmenu(event,d))
 
             const label_element = this.svg.select("#label_group_" + this.id)
                 .selectAll("text")
-                .data<DataNode>(Object.keys(nodes).map((k) => nodes[k]))
+                .data<DataNode>(Object.keys(this.nodes).map((k) => this.nodes[k]))
                 .join("text")
                 .text((d) => d.label)
                     
@@ -254,22 +290,24 @@ export class Visual implements IVisual {
                 .selectAll('line')
                 .data(Object.keys(links).map((k) => links[k]))
                 .join('line')
-                .attr("stroke", d => d.fill || this.formattingSettings.LinkSettings.color.value.value || "#999999")
-                .attr("stroke-opacity", this.formattingSettings.LinkSettings.opacity.value * 0.01 || 0.6)
-                .attr("stroke-width", d => this.formattingSettings.LinkSettings.width.value || 5);
+                .attr("stroke", d => d.stroke || "#999999")
+                .attr("stroke-opacity", this.formattingSettings.linkSettings.opacity.value * 0.01 || 0.6)
+                .attr("stroke-width", d => this.formattingSettings.linkSettings.width.value || 5);
 
             // Set the position attributes of links and nodes each time the simulation ticks.
-            simulation.on("tick", () => {
-                // [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight]
+            simulation.on("tick", () => draw());
+
+            //interactions
+            let draw = () => {
                 node_element
                     .attr("cx", (d) => {
                         //Bounds checking to ensure nodes don't leave the visual space
-                        if (d.x - formattingRadius < (-this.target.clientWidth / 2)){
-                            d.x = (-this.target.clientWidth / 2) + formattingRadius
+                        if (d.x - formattingDefaultRadius < (-this.target.clientWidth / 2)){
+                            d.x = (-this.target.clientWidth / 2) + formattingDefaultRadius
                             d.vx = -d.vx
                         }
-                        if (d.x + formattingRadius > (this.target.clientWidth / 2)){
-                            d.x = (this.target.clientWidth / 2) - formattingRadius
+                        if (d.x + formattingDefaultRadius > (this.target.clientWidth / 2)){
+                            d.x = (this.target.clientWidth / 2) - formattingDefaultRadius
                             d.vx = -d.vx
                         }
 
@@ -278,13 +316,13 @@ export class Visual implements IVisual {
                     })
                     .attr("cy", (d) => {
                         //Bounds checking to ensure nodes don't leave the visual space
-                        if (d.y - formattingRadius < (-this.target.clientHeight / 2)){
-                            d.y = (-this.target.clientHeight / 2) + formattingRadius
+                        if (d.y - formattingDefaultRadius < (-this.target.clientHeight / 2)){
+                            d.y = (-this.target.clientHeight / 2) + formattingDefaultRadius
                             d.vy = -d.vy
                         }
 
-                        if (d.y + formattingRadius > (this.target.clientHeight / 2)){
-                            d.y = (this.target.clientHeight / 2) - formattingRadius
+                        if (d.y + formattingDefaultRadius > (this.target.clientHeight / 2)){
+                            d.y = (this.target.clientHeight / 2) - formattingDefaultRadius
                             d.vy = -d.vy
                         }
 
@@ -293,18 +331,18 @@ export class Visual implements IVisual {
                     })
 
                 label_element
-                    .attr("x", d => d.x + formattingRadius)
-                    .attr("y", d => d.y - formattingRadius)
+                    .attr("x", d => d.x + formattingDefaultRadius)
+                    .attr("y", d => d.y - formattingDefaultRadius)
 
 
                 link_element
                     .attr("x1", d => typeof d.source !== "string" ? d.source.x : undefined)
                     .attr("y1", d => typeof d.source !== "string" ? d.source.y : undefined)
                     .attr("x2", d => typeof d.target !== "string" ? d.target.x : undefined)
-                    .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined);
-            });
+                    .attr("y2", d => typeof d.target !== "string" ? d.target.y : undefined)
+            }
 
-            //interactions
+
             let node_click = (event, data) => {
                 if (event.defaultPrevented) return;
 
@@ -313,9 +351,9 @@ export class Visual implements IVisual {
                 node_element
                     .attr("fill", (d) => {
                         if (d.label === data.label){
-                            return d.fill || formattingColor
+                            return d.fill
                         }
-                        return `${d.fill || formattingColor }66`
+                        return `${d.fill }66`
                     })
                     .attr("stroke", (d) => {
                         if (d.label === data.label){
@@ -327,8 +365,6 @@ export class Visual implements IVisual {
 
             let node_contextmenu = (event, data) => {
                 event.preventDefault()
-                console.log("node clicked")
-                console.log(data.selectionId)
                 this.selectionManager.showContextMenu(data.selectionId,{
                     x: event.clientX,
                     y: event.clientY
@@ -336,16 +372,14 @@ export class Visual implements IVisual {
             }
 
             let background_click = (event, data) => {
-                console.log("background clicked")
                 node_element
-                    .attr("fill", (d) => d.fill || formattingColor )
-                    .attr("stroke", (d) => "#0A0A0A")
+                    .attr("fill", (d) => d.fill )
+                    .attr("stroke", (d) => d.stroke )
                 this.selectionManager.clear()
             }
 
             let background_contextmenu = (event, data) => {
                 event.preventDefault()
-                console.log("background contextemneud")
                 this.selectionManager.showContextMenu({},{
                     x: event.clientX,
                     y: event.clientY
@@ -376,11 +410,12 @@ export class Visual implements IVisual {
         
         }catch(e){
             this.renderingEvents.renderingFailed(options, <string>e);
+            console.log("Error: ", e)
 
             if( e instanceof ParameterError){
                 this.host.displayWarningIcon("Invalid Parameter",e.toString())
             }else{
-                    this.host.displayWarningIcon("Error",e.toString())
+                this.host.displayWarningIcon("Error",e.toString())
             }
         }
     }
@@ -390,6 +425,52 @@ export class Visual implements IVisual {
      * This method is called once every time we open properties pane or when the user edit any format property. 
      */
     public getFormattingModel(): powerbi.visuals.FormattingModel {
-        return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
+
+        try{
+
+
+            /*
+            
+            console.log("Formatting called: ",this.formattingSettings)
+
+            Object.keys(this.nodes).forEach((key) => {
+
+                if(key === "Boston"){
+                    let nodeGroup = new NodeGroupCard("source", "node - " + key, false)
+
+                    nodeGroup.slices = [
+                        new formattingSettings.ColorPicker({
+                            name: "fill",
+                            displayName: "fill",
+                            value: { value: this.nodes[key].fill},
+                            selector: this.nodes[key].selectionId
+                        })
+                    ]
+    
+                    this.formattingSettings.cards.push(nodeGroup);
+                }
+
+                
+            })
+
+            console.log("Formatting cards:  ",this.formattingSettings.cards)
+
+            */
+        
+            return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
+        }catch(e){
+            console.error("formatting error: ", e)
+        }
+    }
+}
+
+
+class NodeGroupCard extends formattingSettings.SimpleCard{
+    constructor(name, displayName, analyticsPane){
+        super()
+        this.name = name;
+        this.displayName = displayName;
+        this.analyticsPane = analyticsPane;
+        this.slices = []
     }
 }
