@@ -24,23 +24,22 @@
             ]
 
         }
-
     ],
     "dataViewMappings": [
         {
             "conditions": [
                 { "source_node": { "min": 1, "max": 1}},
                 { "target_node": { "min": 1, "max": 1}},
-                { "distance":    { "min": 0, "max": 1}}
+                { "distance":    { "min": 1, "max": 1}},
+                { "source_fill": { "min": 0, "max": 1}}
             ],
-            
             "categorical": {
                 "categories": { "for": { "in": "source_node"}},
-                "values": { 
+                "values": {
                     "group": {
                         "by": "target_node",
                         "select": [
-                            { "bind": { "to": "distance"}}  
+                            { "bind": { "to": "distance"}}
                         ]
                     }
                 }
@@ -48,9 +47,9 @@
         }
     ],
     "objects": {
-        "source" : {
+        "node" : {
             "properties": {
-                "pre_fill": {
+                "node_default_fill": {
                     "type": {
                         "fill": {
                             "solid": {
@@ -60,7 +59,7 @@
                     }
 
                 },
-                "fill_Miami": {
+                "node_default_stroke":{
                     "type": {
                         "fill": {
                             "solid": {
@@ -69,20 +68,40 @@
                         }
                     }
                 },
-                "node": {
-                    "type": {
-                        "fill": {
-                            "solid": {
-                                "color": true
-                            }
-                        }
-                    }
-                },
-                "radius": {
+                "node_default_radius": {
                     "type": {
                         "numeric": true
                     }
                 }
+            }
+        },
+        "link": {
+            "properties": {
+                "link_default_stroke":{
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "link_default_opacity": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "link_default_width": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "link_default_gravity": {
+                    "type": {
+                        "numeric": true
+                    }
+                }
+
             }
         },
         "advanced": {

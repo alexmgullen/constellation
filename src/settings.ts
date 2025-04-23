@@ -39,38 +39,42 @@ import { ColorPicker, SimpleCard } from "powerbi-visuals-utils-formattingmodel/l
 /**
  * Data Point Formatting Card
  */
-
 class NodeSettings extends formattingSettings.SimpleCard {
     name: string = "node";
     displayName: string = "Node Formatting";
-    slices: formattingSettings.Slice[] = [];
+
+    default_fill = new formattingSettings.ColorPicker({
+        name: "node_default_fill",
+        displayName: "Default Color",
+        value: { value: "#A0A0A0" }
+    })
+
+    default_stroke = new formattingSettings.ColorPicker({
+        name: "node_default_stroke",
+        displayName: "Default Border Color",
+        value: { value: "#0A0A0A"}
+    })
+
+    default_radius = new formattingSettings.NumUpDown({
+        name: "node_default_radius",
+        displayName: "Default Radius",
+        value: 15
+    })
+
+    slices: formattingSettings.Slice[] = [this.default_fill,this.default_stroke,this.default_radius];
 }
 
 class LinkSettings extends formattingSettings.SimpleCard {
 
-    gravity = new formattingSettings.NumUpDown({
-        name: "link_gravity",
-        displayName: "Gravity",
-        value: -30,
-        visible: true
-    })
-
-    color = new formattingSettings.ColorPicker({
-        name: "link_color",
+    default_stroke = new formattingSettings.ColorPicker({
+        name: "link_default_stroke",
         displayName: "Color",
-        value: { value: "#999999" },
+        value: { value: "#A0A0A0" },
         visible: true
     })
 
-    width = new formattingSettings.NumUpDown({
-        name: "width",
-        displayName: "Line Width",
-        value: 10,
-        visible: true
-    })
-
-    opacity = new formattingSettings.NumUpDown({
-        name: "link_opacity",
+    default_opacity = new formattingSettings.NumUpDown({
+        name: "link_default_opacity",
         displayName: "Opacity (% of 100)",
         value: 60,
         options: {
@@ -79,9 +83,23 @@ class LinkSettings extends formattingSettings.SimpleCard {
         }
     })
 
+    default_width = new formattingSettings.NumUpDown({
+        name: "link_default_width",
+        displayName: "Line Width",
+        value: 10,
+        visible: true
+    })
+
+    default_gravity = new formattingSettings.NumUpDown({
+        name: "link_default_gravity",
+        displayName: "Gravity",
+        value: -30,
+        visible: true
+    })
+
     name: string = "link";
     displayName: string = "Link Settings"
-    slices: Array<formattingSettings.Slice> = [this.gravity,this.width,this.color,this.opacity];
+    slices: Array<formattingSettings.Slice> = [this.default_stroke,this.default_opacity,this.default_width,this.default_gravity];
 }
 
 class AdvancedSettings extends formattingSettings.SimpleCard{
@@ -103,27 +121,8 @@ class AdvancedSettings extends formattingSettings.SimpleCard{
 *
 */
 export class VisualFormattingSettingsModel extends FormattingSettingsModel {
-    // Create formatting settings model formatting cards
-
     nodeSettings = new NodeSettings()
     linkSettings = new LinkSettings()
     advancedSettings = new AdvancedSettings()
-    cards: Array<SimpleCard> = [this.nodeSettings,this.linkSettings,this.advancedSettings]
-
-    populateNodeSettings(dataPoints: Record<string,DataNode>){
-        const slices: formattingSettings.Slice[] = this.nodeSettings.slices;
-
-        if(dataPoints){
-            Object.keys(dataPoints).forEach((key) => {
-                console.log(key)
-                slices.push(new ColorPicker({
-                    name: "fill",
-                    displayName: key,
-                    value: { value: dataPoints[key].fill },
-                    selector: dataPoints[key].selectionId ? (dataPoints[key].selectionId as any).getSelector() : undefined
-                }))
-            })
-        }
-
-    }
+    cards: Array<SimpleCard> = [this.nodeSettings, this.linkSettings, this.advancedSettings]
 }

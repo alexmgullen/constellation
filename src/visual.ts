@@ -79,8 +79,9 @@ export interface DataLink extends d3.SimulationLinkDatum<DataNode>{
     fill?: string;
     distance: number;
     stroke: string;
+    opacity: number;
+    width: number;
 }
-
 
 class ParameterError extends Error {
     constructor(message, options){
@@ -114,7 +115,7 @@ export class Visual implements IVisual {
         
         if (document) {
             this.svg = d3.select(this.target).append("svg")
-                .attr("id","network" + this.id)
+                .attr("id","constellation" + this.id)
                 .attr('width',options.element.clientWidth)
                 .attr('height',options.element.clientHeight)
                 .attr("style", "width: 100%; height: 100%;")
@@ -140,20 +141,30 @@ export class Visual implements IVisual {
         this.svg.attr("viewBox", [-this.target.clientWidth / 2, -this.target.clientHeight / 2, this.target.clientWidth, this.target.clientHeight])
         try{
 
+            let formattingNodeDefaultFill: string = "#A0A0A0";
+            let formattingNodeDefaultStroke: string = "#0A0A0A";
+            let formattingNodeDefaultRadius: number = 15;
             
-            let formattingDefaultColor = "#00ff00";
-            let formattingDefaultRadius = 15
+            let formattingLinkDefaultStroke: string = "#A0A0A0";
+            let formattingLinkDefaultOpacity: number = 0.6;
+            let formattingLinkDefaultWidth: number = 10;
+            let formattingLinkDefaultGravity: number = -30;
 
-
-            let formattingSeperator: string = "<SEPERATOR>";
-            let formattingDefaultGravity: number = -30;
+            let formattingAdvancedSeperator: string = "<SEPERATOR>";
 
             if( this.formattingSettings ){
-                formattingSeperator = this.formattingSettings.advancedSettings.seperator.value || formattingSeperator;
-                formattingDefaultGravity = this.formattingSettings.linkSettings.gravity.value || formattingDefaultGravity;
-                //const formattingDefaultColor = this.formattingSettings.sourceSettings.defaultFill || "#00ff00";
-            }
 
+                formattingNodeDefaultFill = this.formattingSettings.nodeSettings.default_fill.value.value || formattingNodeDefaultFill;
+                formattingNodeDefaultStroke = this.formattingSettings.nodeSettings.default_stroke.value.value || formattingNodeDefaultStroke;
+                formattingNodeDefaultRadius = this.formattingSettings.nodeSettings.default_radius.value || formattingNodeDefaultRadius;
+
+                formattingLinkDefaultStroke = this.formattingSettings.linkSettings.default_stroke.value.value || formattingLinkDefaultStroke;
+                formattingLinkDefaultOpacity = this.formattingSettings.linkSettings.default_opacity.value * 0.01 || formattingLinkDefaultOpacity;
+                formattingLinkDefaultWidth = this.formattingSettings.linkSettings.default_width.value || formattingLinkDefaultWidth;
+                formattingLinkDefaultGravity = this.formattingSettings.linkSettings.default_gravity.value || formattingLinkDefaultGravity;
+
+                formattingAdvancedSeperator = this.formattingSettings.advancedSettings.seperator.value || formattingAdvancedSeperator;
+            }
 
             this.nodes = {};
             const links: Record<string,DataLink> = {};
@@ -167,10 +178,8 @@ export class Visual implements IVisual {
                 throw new ParameterError("Not enough parameters, Make sure the Sources, Targets and Distances Columns are populated",{});
             }
 
-            
             const categoryColumn = options.dataViews[0].categorical.categories[0];
             const categories = options.dataViews[0].categorical.categories[0].values;
-            
             const targets = options.dataViews[0].categorical.values.grouped();
 
             targets.forEach((target,targetIndex) => {
@@ -179,14 +188,13 @@ export class Visual implements IVisual {
                     if(target.name.toString() in this.nodes == false){
                         this.nodes[target.name.toString()] = <DataNode>{
                             label: target.name.toString(),
-                            fill: "#A0A0A0",
-                            stroke: "#0A0A0A",
-                            radius: formattingDefaultRadius,
+                            fill: formattingNodeDefaultFill,
+                            stroke: formattingNodeDefaultStroke,
+                            radius: formattingNodeDefaultRadius,
                             selectionId: undefined
                         }
                     }
                 }
-
 
                 //iterate over the sources associated with each target
                 target.values[0].values.forEach((distance, distanceIndex) => {
@@ -197,15 +205,15 @@ export class Visual implements IVisual {
                         if(categories[distanceIndex].toString() in this.nodes == false){
                             this.nodes[categories[distanceIndex].toString()] = <DataNode>{
                                 label: categories[distanceIndex].toString(),
-                                fill: "#A0A0A0",
-                                stroke: "#0A0A0A",
-                                radius: formattingDefaultRadius,
+                                fill: formattingNodeDefaultFill,
+                                stroke: formattingNodeDefaultStroke,
+                                radius: formattingNodeDefaultRadius,
                                 selectionId: this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId()
                             }
                         }else{
                             //if the node exists in nodes, but is missing some values, populate those values.
                             if(!this.nodes[categories[distanceIndex].toString()].radius){
-                                this.nodes[categories[distanceIndex].toString()].radius = formattingDefaultRadius;
+                                this.nodes[categories[distanceIndex].toString()].radius = formattingNodeDefaultRadius;
                             }
                             if(!this.nodes[categories[distanceIndex].toString()].selectionId){
                                 this.nodes[categories[distanceIndex].toString()].selectionId = this.host.createSelectionIdBuilder().withCategory(categoryColumn,distanceIndex).createSelectionId();
@@ -215,56 +223,31 @@ export class Visual implements IVisual {
 
                     //Create a link if the source and the target are valid
                     if (target.name && distance){
-                        links[target.name + formattingSeperator + categories[distanceIndex].toString()] = <DataLink>{
+                        links[target.name + formattingAdvancedSeperator + categories[distanceIndex].toString()] = <DataLink>{
                             source: this.nodes[target.name.toString()],
                             target: this.nodes[categories[distanceIndex].toString()],
-                            distance: distance
+                            distance: distance,
+                            stroke: formattingLinkDefaultStroke,
+                            opacity: formattingLinkDefaultOpacity,
+                            width: formattingLinkDefaultWidth
                         }
                     }
                 })
             })
 
-
-            console.log("dataview: ", options.dataViews)
-            console.log("nodes: ", this.nodes)
-            this.formattingSettings.populateNodeSettings(this.nodes)
-
-
-            console.log("formattings settings after pop: ", this.formattingSettings.nodeSettings)
-            
-
-            //Process formatting options
-            Object.keys(this.nodes).forEach((key) => {
-
-                /*
-                this.formattingSettings.sourceSettings.slices.forEach((formatValue) => {
-                    if(formatValue.name == "fill" && key === formatValue.displayName.substring(7)){
-                        console.log("format vlaue: ", formatValue, " : ", (formatValue as formattingSettings.ColorPicker).value.value)
-                        
-                        nodes[key].fill = (formatValue as formattingSettings.ColorPicker).value.value
-
-                        
-                        //nodes[key].fill = settings.fill.value.value
-                        //nodes[key].radius = settings.radius.value
-                    }
-                })
-
-                */
-            })
-
-            //Start of simulation recreations
+            //Start simulation
 
             this.renderingEvents.renderingStarted(options);
             const simulation = d3.forceSimulation<DataNode>(Object.keys(this.nodes).map((k) => this.nodes[k]))
             .force("link", d3.forceLink<DataNode, DataLink>(Object.keys(links).map((k) => links[k])).id((d) => d.label).distance((d) => d.distance))
-            .force("charge", d3.forceManyBody().strength(formattingDefaultGravity))
+            .force("charge", d3.forceManyBody().strength(formattingLinkDefaultGravity))
 
             const node_element = this.svg.select("#node_group_" + this.id)
                 .selectAll("circle")
                 .data<DataNode>(Object.keys(this.nodes).map((k)=> this.nodes[k]))
                 .join("circle")
-                .attr("r", (d) => d.radius || formattingDefaultRadius)
-                .attr("stroke", (d) => d.stroke || "#0A0A0A")
+                .attr("r", (d) => d.radius)
+                .attr("stroke", (d) => d.stroke)
                 .attr("stroke-width",(d) => 2.5)
                 .attr("fill", (d) => d.fill)
                 .call(d3.drag<SVGCircleElement,DataNode>()
@@ -290,9 +273,9 @@ export class Visual implements IVisual {
                 .selectAll('line')
                 .data(Object.keys(links).map((k) => links[k]))
                 .join('line')
-                .attr("stroke", d => d.stroke || "#999999")
-                .attr("stroke-opacity", this.formattingSettings.linkSettings.opacity.value * 0.01 || 0.6)
-                .attr("stroke-width", d => this.formattingSettings.linkSettings.width.value || 5);
+                .attr("stroke", d => d.stroke)
+                .attr("stroke-opacity", d => d.opacity )
+                .attr("stroke-width", d => d.width);
 
             // Set the position attributes of links and nodes each time the simulation ticks.
             simulation.on("tick", () => draw());
@@ -302,12 +285,12 @@ export class Visual implements IVisual {
                 node_element
                     .attr("cx", (d) => {
                         //Bounds checking to ensure nodes don't leave the visual space
-                        if (d.x - formattingDefaultRadius < (-this.target.clientWidth / 2)){
-                            d.x = (-this.target.clientWidth / 2) + formattingDefaultRadius
+                        if (d.x - formattingNodeDefaultRadius < (-this.target.clientWidth / 2)){
+                            d.x = (-this.target.clientWidth / 2) + formattingNodeDefaultRadius
                             d.vx = -d.vx
                         }
-                        if (d.x + formattingDefaultRadius > (this.target.clientWidth / 2)){
-                            d.x = (this.target.clientWidth / 2) - formattingDefaultRadius
+                        if (d.x + formattingNodeDefaultRadius > (this.target.clientWidth / 2)){
+                            d.x = (this.target.clientWidth / 2) - formattingNodeDefaultRadius
                             d.vx = -d.vx
                         }
 
@@ -316,13 +299,13 @@ export class Visual implements IVisual {
                     })
                     .attr("cy", (d) => {
                         //Bounds checking to ensure nodes don't leave the visual space
-                        if (d.y - formattingDefaultRadius < (-this.target.clientHeight / 2)){
-                            d.y = (-this.target.clientHeight / 2) + formattingDefaultRadius
+                        if (d.y - formattingNodeDefaultRadius < (-this.target.clientHeight / 2)){
+                            d.y = (-this.target.clientHeight / 2) + formattingNodeDefaultRadius
                             d.vy = -d.vy
                         }
 
-                        if (d.y + formattingDefaultRadius > (this.target.clientHeight / 2)){
-                            d.y = (this.target.clientHeight / 2) - formattingDefaultRadius
+                        if (d.y + formattingNodeDefaultRadius > (this.target.clientHeight / 2)){
+                            d.y = (this.target.clientHeight / 2) - formattingNodeDefaultRadius
                             d.vy = -d.vy
                         }
 
@@ -331,9 +314,8 @@ export class Visual implements IVisual {
                     })
 
                 label_element
-                    .attr("x", d => d.x + formattingDefaultRadius)
-                    .attr("y", d => d.y - formattingDefaultRadius)
-
+                    .attr("x", d => d.x + formattingNodeDefaultRadius)
+                    .attr("y", d => d.y - formattingNodeDefaultRadius)
 
                 link_element
                     .attr("x1", d => typeof d.source !== "string" ? d.source.x : undefined)
@@ -410,7 +392,6 @@ export class Visual implements IVisual {
         
         }catch(e){
             this.renderingEvents.renderingFailed(options, <string>e);
-            console.log("Error: ", e)
 
             if( e instanceof ParameterError){
                 this.host.displayWarningIcon("Invalid Parameter",e.toString())
@@ -425,42 +406,7 @@ export class Visual implements IVisual {
      * This method is called once every time we open properties pane or when the user edit any format property. 
      */
     public getFormattingModel(): powerbi.visuals.FormattingModel {
-
-        try{
-
-
-            /*
-            
-            console.log("Formatting called: ",this.formattingSettings)
-
-            Object.keys(this.nodes).forEach((key) => {
-
-                if(key === "Boston"){
-                    let nodeGroup = new NodeGroupCard("source", "node - " + key, false)
-
-                    nodeGroup.slices = [
-                        new formattingSettings.ColorPicker({
-                            name: "fill",
-                            displayName: "fill",
-                            value: { value: this.nodes[key].fill},
-                            selector: this.nodes[key].selectionId
-                        })
-                    ]
-    
-                    this.formattingSettings.cards.push(nodeGroup);
-                }
-
-                
-            })
-
-            console.log("Formatting cards:  ",this.formattingSettings.cards)
-
-            */
-        
-            return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
-        }catch(e){
-            console.error("formatting error: ", e)
-        }
+        return this.formattingSettingsService.buildFormattingModel(this.formattingSettings);
     }
 }
 
